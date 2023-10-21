@@ -14,3 +14,9 @@ spring:
   sql:
     init:
       platform: always
+
+application:
+  token:
+    secret-key: eef42bccbf28d7bd730df181776af2063044645ee030b6df6692e15534422256
+    refresh-duration: 600000
+    access-duration: 60000

@@ -18,9 +18,9 @@ public class UserController {
     private UserService userService;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthenticationResponse> register(@RequestBody RegisterRequest request){
+    public void register(@RequestBody RegisterRequest request){
         System.out.println(request);
-        return ResponseEntity.status(HttpStatus.OK).body(userService.register(request));
+        userService.register(request);
     }
 
     @PostMapping("/authenticate")

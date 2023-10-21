@@ -2,6 +2,9 @@ package com.malhar.jwt.jwtauth.user;
 
 import com.malhar.jwt.jwtauth.config.CUserDetailsService;
 import com.malhar.jwt.jwtauth.config.JwtService;
+import com.malhar.jwt.jwtauth.token.Token;
+import com.malhar.jwt.jwtauth.token.TokenRepository;
+import com.malhar.jwt.jwtauth.token.TokenType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -21,6 +24,9 @@ public class AgentService {
     private AgentRepository agentRepository;
 
     @Autowired
+    private TokenRepository tokenRepository;
+
+    @Autowired
     private CUserDetailsService userDetailsService;
 
     @Autowired
@@ -32,7 +38,7 @@ public class AgentService {
     @Autowired
     private AuthenticationManager authenticationManager;
 
-    public AuthenticationResponse register(RegisterRequest request){
+    public void register(RegisterRequest request){
         var user = Agent.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
@@ -42,18 +48,6 @@ public class AgentService {
                 .role(Role.AGENT)
                 .build();
         agentRepository.save(user);
-        userDetailsService.setRole(Role.AGENT);
-        Authentication auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
-                        request.getPassword()
-                )
-        );
-        SecurityContextHolder.getContext().setAuthentication(auth);
-        var jwtToken = jwtService.generateToken(Role.AGENT.name(), auth);
-        return AuthenticationResponse.builder()
-                .token(jwtToken)
-                .build();
     }
 
 
@@ -74,15 +68,42 @@ public class AgentService {
         var user = agentRepository.findByUsername(request.getUsername())
                 .orElseThrow();
         var jwtToken = jwtService.generateToken(Role.AGENT.name(), auth);
-
+        revokeAllUserTokens(user);
+        saveUserToken(user, jwtToken);
         return AuthenticationResponse.builder()
-                .token(jwtToken)
+                .accessToken(jwtToken)
                 .build();
     }
+
+    private void revokeAllUserTokens(Agent user) {
+        var validUserTokens = tokenRepository.findAllValidTokenByAgent(user.getId());
+        if (validUserTokens.isEmpty())
+            return;
+        validUserTokens.forEach(token -> {
+            token.setExpired(true);
+            token.setRevoked(true);
+        });
+        tokenRepository.saveAll(validUserTokens);
+    }
+
+    private void saveUserToken(Agent agent, String jwtToken) {
+        var token = Token.builder()
+                .admin(null)
+                .token(jwtToken)
+                .tokenType(TokenType.BEARER)
+                .expired(false)
+                .revoked(false)
+                .user(null)
+                .agent(agent)
+                .build();
+        tokenRepository.save(token);
+    }
+
 
     public void activated(AgentActiveRequest activeRequest) {
         Optional<Agent> agent = agentRepository.findById(activeRequest.id);
         agent.get().setActive(true);
         agentRepository.save(agent.get());
     }
+
 }

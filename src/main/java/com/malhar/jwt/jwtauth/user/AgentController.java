@@ -16,9 +16,9 @@ public class AgentController {
     private AgentService agentService;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthenticationResponse> register(@RequestBody RegisterRequest request){
+    public void register(@RequestBody RegisterRequest request){
         System.out.println(request);
-        return ResponseEntity.status(HttpStatus.OK).body(agentService.register(request));
+         agentService.register(request);
     }
 
     @PostMapping("/authenticate")

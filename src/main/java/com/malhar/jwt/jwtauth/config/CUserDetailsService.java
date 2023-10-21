@@ -37,6 +37,8 @@ public class CUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        // need to append ROLE_ (later to be use for hasRole, hasRole adds "ROLE_" automatically if we don;t
+        // have thins it will cause problem)
         if(role == Role.ADMIN){
             Admin admin = adminRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("Admin Username " + username + "not found"));
             SimpleGrantedAuthority adminAuthority = new SimpleGrantedAuthority("ROLE_" +Role.ADMIN.name());

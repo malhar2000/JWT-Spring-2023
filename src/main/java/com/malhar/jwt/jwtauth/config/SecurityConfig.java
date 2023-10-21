@@ -1,6 +1,5 @@
 package com.malhar.jwt.jwtauth.config;
 
-import com.malhar.jwt.jwtauth.user.Role;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -32,7 +31,6 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable).
                 authorizeHttpRequests(
                         (requests) -> requests.requestMatchers("/user/**", "/agent/**", "/admin/**").permitAll()
-                                .requestMatchers("/secure/**").hasRole(Role.USER.name())
                         .anyRequest().authenticated())
                 .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider)

@@ -1,5 +1,6 @@
 package com.malhar.jwt.jwtauth.config;
 
+import com.malhar.jwt.jwtauth.token.TokenRepository;
 import com.malhar.jwt.jwtauth.user.Role;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -28,6 +29,9 @@ public class JWTAuthFilter extends OncePerRequestFilter {
     @Autowired
     private final CUserDetailsService userDetailsService;
 
+    @Autowired
+    private TokenRepository tokenRepository;
+
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull  FilterChain filterChain)
@@ -54,7 +58,11 @@ public class JWTAuthFilter extends OncePerRequestFilter {
             System.out.println(role);
             userDetailsService.setRole(Role.valueOf(role));
             UserDetails user =  userDetailsService.loadUserByUsername(username);
-            if(jwtService.isTokenValid(jwtToken, user)){
+            var isTokenValid = tokenRepository.findByToken(jwtToken)
+                    .map(t -> !t.isExpired() && !t.isRevoked())
+                    .orElse(false);
+            System.out.println(isTokenValid);
+            if(jwtService.isTokenValid(jwtToken, user) && isTokenValid){
                 // if token valid we need to
                 // 1. Update security context
                 // 2. send request to DispatcherServerLet

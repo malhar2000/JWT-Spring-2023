@@ -1,10 +1,13 @@
 package com.malhar.jwt.jwtauth.user;
 
+import com.malhar.jwt.jwtauth.token.Token;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -30,4 +33,6 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role;
 
+    @OneToMany(mappedBy = "user")
+    private List<Token> tokens;
 }

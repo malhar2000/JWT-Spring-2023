@@ -6,6 +6,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -17,7 +18,14 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    private static final String SECRET_KEY = "eef42bccbf28d7bd730df181776af2063044645ee030b6df6692e15534422256";
+    @Value("${application.token.secret-key}")
+    private  String secretKey;
+
+    @Value("${application.token.refresh-duration}")
+    private long refreshDuration;
+
+    @Value("${application.token.access-duration}")
+    private long accessDuration;
 
     public String extractUsername(String token){
         // subject should be the email or the username
@@ -43,7 +51,7 @@ public class JwtService {
     }
 
     private Key getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
+        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
 
         return Keys.hmacShaKeyFor(keyBytes);
     }
@@ -60,7 +68,27 @@ public class JwtService {
             String role,
             Authentication auth
             ){
-        String username = auth.getName();
+         return buildToken(role, auth.getName(), accessDuration);
+    }
+
+    // for refresh token case
+    public String generateToken(
+            String role,
+            String username
+    ){
+        return buildToken(role, username, accessDuration);
+    }
+
+    public String generateRefreshToken(
+            String role,
+            Authentication auth
+    ){
+        return buildToken(role, auth.getName(), refreshDuration);
+    }
+
+    private String buildToken(String role,
+                              String username,
+                              long expiration){
         // token valid for 24 hours
         // compact will generate and return the token
         return Jwts
@@ -68,7 +96,7 @@ public class JwtService {
                 .claim("Role", Role.valueOf(role).name())
                 .setSubject(username)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 24))
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -88,6 +116,8 @@ public class JwtService {
     private Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
+
+
 
 
 }

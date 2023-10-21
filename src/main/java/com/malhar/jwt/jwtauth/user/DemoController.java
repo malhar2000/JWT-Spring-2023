@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class DemoController {
 
     @GetMapping
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
      public String secure(){
         return "Secure!!";
     }

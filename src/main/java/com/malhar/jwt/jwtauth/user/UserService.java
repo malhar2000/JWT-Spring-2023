@@ -2,6 +2,9 @@ package com.malhar.jwt.jwtauth.user;
 
 import com.malhar.jwt.jwtauth.config.CUserDetailsService;
 import com.malhar.jwt.jwtauth.config.JwtService;
+import com.malhar.jwt.jwtauth.token.Token;
+import com.malhar.jwt.jwtauth.token.TokenRepository;
+import com.malhar.jwt.jwtauth.token.TokenType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,6 +22,9 @@ public class UserService {
     private UserRepository userRepository;
 
     @Autowired
+    private TokenRepository tokenRepository;
+
+    @Autowired
     private CUserDetailsService userDetailsService;
 
     @Autowired
@@ -30,7 +36,7 @@ public class UserService {
     @Autowired
     private AuthenticationManager authenticationManager;
 
-    public AuthenticationResponse register(RegisterRequest request){
+    public void register(RegisterRequest request){
         var user = User.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
@@ -39,17 +45,6 @@ public class UserService {
                 .role(Role.USER)
                 .build();
         userRepository.save(user);
-        Authentication auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
-                        request.getPassword()
-                )
-        );
-        SecurityContextHolder.getContext().setAuthentication(auth);
-        var jwtToken = jwtService.generateToken(Role.USER.name(), auth);
-        return AuthenticationResponse.builder()
-                .token(jwtToken)
-                .build();
     }
 
 
@@ -66,9 +61,36 @@ public class UserService {
         var user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow();
         var jwtToken = jwtService.generateToken(Role.USER.name(), auth);
-
+        revokeAllUserTokens(user);
+        saveUserToken(user, jwtToken);
         return AuthenticationResponse.builder()
-                .token(jwtToken)
+                .accessToken(jwtToken)
                 .build();
     }
+
+    private void revokeAllUserTokens(User user) {
+        var validUserTokens = tokenRepository.findAllValidTokenByUser(user.getId());
+        if (validUserTokens.isEmpty())
+            return;
+        validUserTokens.forEach(token -> {
+            token.setExpired(true);
+            token.setRevoked(true);
+        });
+        tokenRepository.saveAll(validUserTokens);
+    }
+
+    private void saveUserToken(User user, String jwtToken) {
+        var token = Token.builder()
+                .admin(null)
+                .token(jwtToken)
+                .tokenType(TokenType.BEARER)
+                .expired(false)
+                .revoked(false)
+                .user(user)
+                .agent(null)
+                .build();
+        tokenRepository.save(token);
+    }
+
+
 }
